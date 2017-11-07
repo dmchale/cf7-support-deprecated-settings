@@ -23,15 +23,40 @@ License: GPL2
 function cf7sds_filter_wpcf7_form_response_output( $output, $class, $content, $instance ) {
 
 	// Initialize variables
-	$form_id       = $instance->id;        // Form ID of the form being rendered
 	$settings      = (array) explode( "\n", $instance->additional_settings );        // Grab the "Additional Settings" from the form
-	$arr_submit    = array();              // Init
-	$arr_mail_sent = array();              // Init
+	$script_output = '';            // Initialize blank value
 
-	// Sanitize the string, just like CF7 itself does
+	// If there are settings, do some work
 	if ( ! empty( $settings ) ) {
+		// Form ID of the form being rendered
+		$form_id = $instance->id;
+
+		// Sanitize the string, just like CF7 itself does
 		$settings = array_map( 'cf7sds_wpcf7_strip_quote', $settings );
+
+		// Handle most of the logic to process the settings found
+		$script_output = cf7sds_process_settings( $form_id, $settings );
 	}
+
+	// Return the original output, appended with potential output
+	return $output . $script_output;
+
+}
+
+add_filter( 'wpcf7_form_response_output', 'cf7sds_filter_wpcf7_form_response_output', 10, 4 );
+
+
+/**
+ * Handle most of the logic to process the settings found
+ *
+ * @param $form_id
+ * @param $settings
+ *
+ * @return string
+ */
+function cf7sds_process_settings( $form_id, $settings ) {
+	$arr_submit    = array();       // Init
+	$arr_mail_sent = array();       // Init
 
 	// Loop through our settings to look for `on_sent_ok` or `on_submit`
 	foreach ( $settings as $setting ) {
@@ -59,14 +84,8 @@ function cf7sds_filter_wpcf7_form_response_output( $output, $class, $content, $i
 	// Generate our script tags, if we have anything that made it into our arrays
 	$script_output = cf7sds_build_script_output( $form_id, $arr_submit, $arr_mail_sent );
 
-	// Return the original output, appended with potential output
-	return $output . $script_output;
-
+	return $script_output;
 }
-
-;
-add_filter( 'wpcf7_form_response_output', 'cf7sds_filter_wpcf7_form_response_output', 10, 4 );
-
 
 /**
  * Build script tag to append to the form rendering
