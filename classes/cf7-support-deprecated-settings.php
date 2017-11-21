@@ -131,7 +131,7 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		private static function build_script_output() {
 
 			if ( ! empty( self::$arr_mail_sent ) || ! empty( self::$arr_submit ) ) {
-				self::$additional_output .= "<script>alert('mailsent');\nvar wpcf7Elm = document.querySelector( '.wpcf7' );\n";
+				self::$additional_output .= "<script>var wpcf7Elm = document.querySelector( '.wpcf7' );\n";
 
 				if ( ! empty( self::$arr_mail_sent ) ) {
 					self::$additional_output .= self::write_js_from_array( 'wpcf7mailsent', self::$arr_mail_sent );
