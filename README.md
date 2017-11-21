@@ -1,6 +1,6 @@
 # Contact Form 7: Support Deprecated Settings
 
-[![Code Climate](https://api.codeclimate.com/v1/badges/27f6d9f01370338430cc/maintainability.svg)](cf7-support-deprecated-settings) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/4864f5cb70f340a9b04068454b6b39c7)](https://www.codacy.com/app/dmchale/cf7-support-deprecated-settings?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dmchale/cf7-support-deprecated-settings&amp;utm_campaign=Badge_Grade)
+[![Maintainability](https://api.codeclimate.com/v1/badges/27f6d9f01370338430cc/maintainability)](https://codeclimate.com/github/dmchale/cf7-support-deprecated-settings/maintainability) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/4864f5cb70f340a9b04068454b6b39c7)](https://www.codacy.com/app/dmchale/cf7-support-deprecated-settings?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dmchale/cf7-support-deprecated-settings&amp;utm_campaign=Badge_Grade)
 
 Provide continued support for `on_sent_ok` and `on_submit` within Contact Form 7's Additional Settings
 
