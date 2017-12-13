@@ -12,15 +12,27 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @var int
 		 */
-		private static $form_id = 0;                    // Init
-		private static $settings = array();             // Init
-		private static $arr_submit = array();           // Init
-		private static $arr_mail_sent = array();        // Init
-		private static $additional_output = '';
+		private $additional_output;
+		private $arr_submit;
+		private $arr_mail_sent;
+		private $form_id;
+		private $settings;
 
 
 		/**
-		 * Static function which is called by the CF7 filter. This starts everything
+		 * CF7_Support_Deprecated_Settings constructor.
+		 */
+		public function __construct() {
+			add_filter( 'wpcf7_form_response_output', array( &$this, 'filter' ), 10, 4 );
+
+			// Disable the admin actions that normally handle the Additional Settings
+			add_action( 'wpcf7_submit', array( &$this, 'prevent_admin_actions_post' ) );
+			add_filter( 'wpcf7_ajax_json_echo', array( &$this, 'prevent_admin_actions_rest' ) );
+		}
+
+
+		/**
+		 * Primary function
 		 *
 		 * @param $output
 		 * @param $class
@@ -29,21 +41,55 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @return string
 		 */
-		public static function filter( $output, $class, $content, $instance ) {
+		public function filter( $output, $class, $content, $instance ) {
 			// Re-Initialize variables
-			self::$additional_output = '';      // Re-initialize this on every call to the filter
-			self::$arr_submit = array();        // Re-initialize this on every call to the filter
-			self::$arr_mail_sent = array();     // Re-initialize this on every call to the filter
+			$this->additional_output = '';      // Re-initialize this on every call to the filter
+			$this->arr_submit        = array();        // Re-initialize this on every call to the filter
+			$this->arr_mail_sent     = array();     // Re-initialize this on every call to the filter
 
 			// Set variables to current values for current filter
-			self::$form_id = $instance->id();
-			self::$settings = (array) explode( "\n", $instance->prop( 'additional_settings' ) );
+			$this->form_id  = $instance->id();
+			$this->settings = (array) explode( "\n", $instance->prop( 'additional_settings' ) );
 
 			// Handle logic
-			self::process_settings();
+			$this->process_settings();
 
 			// Return the original output, appended with possible additional output
-			return $output . self::$additional_output;
+			return $output . $this->additional_output;
+		}
+
+
+		/**
+		 * If this plugin is installed, we do NOT want the admin form processing to ALSO run the Additional Settings
+		 * Use this function to empty the $result variables as necessary to make sure things don't fire twice
+		 *
+		 * @param $form
+		 * @param $result
+		 *
+		 * @return mixed
+		 */
+		public function prevent_admin_actions_post( $form, $result ) {
+			unset( $result['scripts_on_sent_ok'] );
+			unset( $result['scripts_on_submit'] );
+
+			return $result;
+		}
+
+
+		/**
+		 * If this plugin is installed, we do NOT want the admin form processing to ALSO run the Additional Settings
+		 * Use this function to empty the $result variables as necessary to make sure things don't fire twice
+		 *
+		 * @param $response
+		 * @param $result
+		 *
+		 * @return mixed
+		 */
+		public function prevent_admin_actions_rest( $response, $result ) {
+			unset( $response['onSentOk'] );
+			unset( $response['onSubmit'] );
+
+			return $response;
 		}
 
 
@@ -52,34 +98,34 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @return string
 		 */
-		private static function process_settings() {
+		private function process_settings() {
 
 			// If there no settings, abort
-			if ( empty( self::$settings ) ) {
+			if ( empty( $this->settings ) ) {
 				return '';
 			}
 
 			// Sanitize the strings before we go into the loop
-			self::$settings = array_map( 'self::strip_quotes', self::$settings );
+			$this->settings = array_map( array( &$this, 'strip_quote' ), $this->settings );
 
 			// Call function to prepare our settings arrays
-			self::build_settings_arrays();
+			$this->build_settings_arrays();
 
 			// Generate our script tags, if we have anything that made it into our arrays
-			self::build_script_output();
+			$this->build_script_output();
 
 		}
 
 
 		/**
 		 * Stolen verbatim from CF7 itself (v4.9.1)
-		 * /includes/formatting.php
+		 * wpcf7_strip_quote() in /includes/formatting.php
 		 *
 		 * @param $text
 		 *
 		 * @return string
 		 */
-		private static function strip_quotes( $text ) {
+		private function strip_quote( $text ) {
 			$text = trim( $text );
 
 			if ( preg_match( '/^"(.*)"$/s', $text, $matches ) ) {
@@ -95,25 +141,25 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 * Loop through all of our settings, see if they are one of the two we care about
 		 * Add them to the appropriate array, if so
 		 */
-		private static function build_settings_arrays() {
+		private function build_settings_arrays() {
 
 			// Loop through our settings to look for `on_sent_ok` or `on_submit`
-			foreach ( self::$settings as $setting ) {
+			foreach ( $this->settings as $setting ) {
 
 				// Define what our new Custom DOM Event should be based on what the current setting was
-				$dom_event = self::get_dom_event( $setting );
+				$dom_event = $this->get_dom_event( $setting );
 
 				// If we have a hit...
 				if ( '' != $dom_event ) {
 
 					// Clean up the setting value
-					$setting = self::remove_setting( $setting );
+					$setting = $this->remove_setting( $setting );
 
 					// Add this setting to an array of settings, so we can output them all at the same time below
 					if ( 'wpcf7submit' == $dom_event ) {
-						self::$arr_submit[] = $setting . '\n';
+						$this->arr_submit[] = $setting . "\n";
 					} elseif ( 'wpcf7mailsent' == $dom_event ) {
-						self::$arr_mail_sent[] = $setting . '\n';
+						$this->arr_mail_sent[] = $setting . "\n";
 					}
 
 				}
@@ -128,20 +174,20 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @return string
 		 */
-		private static function build_script_output() {
+		private function build_script_output() {
 
-			if ( ! empty( self::$arr_mail_sent ) || ! empty( self::$arr_submit ) ) {
-				self::$additional_output .= "<script>var wpcf7Elm = document.querySelector( '.wpcf7' );\n";
+			if ( ! empty( $this->arr_mail_sent ) || ! empty( $this->arr_submit ) ) {
+				$this->additional_output .= "<script>\n";
 
-				if ( ! empty( self::$arr_mail_sent ) ) {
-					self::$additional_output .= self::write_js_from_array( 'wpcf7mailsent', self::$arr_mail_sent );
+				if ( ! empty( $this->arr_mail_sent ) ) {
+					$this->additional_output .= $this->write_js_from_array( 'wpcf7mailsent', $this->arr_mail_sent );
 				}
 
-				if ( ! empty( self::$arr_submit ) ) {
-					self::$additional_output .= self::write_js_from_array( 'wpcf7submit', self::$arr_submit );
+				if ( ! empty( $this->arr_submit ) ) {
+					$this->additional_output .= $this->write_js_from_array( 'wpcf7submit', $this->arr_submit );
 				}
 
-				self::$additional_output .= "</script>\n";
+				$this->additional_output .= "</script>\n";
 			}
 
 		}
@@ -154,7 +200,7 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @return string
 		 */
-		private static function get_dom_event( $setting ) {
+		private function get_dom_event( $setting ) {
 			$dom_event = '';
 
 			if ( false !== strpos( $setting, 'on_sent_ok' ) ) {
@@ -174,13 +220,19 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @return mixed
 		 */
-		private static function remove_setting( $str ) {
+		private function remove_setting( $str ) {
 			$str = trim( str_replace( 'on_sent_ok:', '', $str ) );
 			$str = trim( str_replace( 'on_submit:', '', $str ) );
 
-			preg_match( '/"(.*?)"$/', $str, $match );
+			$first_quote = strpos( $str, "\"" );
+			$last_quote  = strrpos( $str, "\"" );
 
-			return $match[0];
+			// Ensure we're looking for at least one character
+			if ( $first_quote < $last_quote ) {
+				$str = substr( $str, $first_quote + 1, $last_quote - 1 );
+			}
+
+			return $str;
 		}
 
 
@@ -192,9 +244,9 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 *
 		 * @return string
 		 */
-		private static function write_js_from_array( $dom_event, $arr ) {
-			$script_output = "wpcf7Elm.addEventListener( '" . $dom_event . "', function( event ) {
-                if ( '" . self::$form_id . "' == event.detail.contactFormId ) {
+		private function write_js_from_array( $dom_event, $arr ) {
+			$script_output = "document.addEventListener( '" . $dom_event . "', function( event ) {
+                if ( '" . $this->form_id . "' == event.detail.contactFormId ) {
                     ";
 
 			foreach ( $arr as $setting ) {
