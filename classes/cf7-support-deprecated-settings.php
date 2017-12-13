@@ -23,9 +23,11 @@ if ( ! class_exists( 'CF7_Support_Deprecated_Settings' ) ) {
 		 * CF7_Support_Deprecated_Settings constructor.
 		 */
 		public function __construct() {
+			// Filter output to add our DOMListener code to the form
 			add_filter( 'wpcf7_form_response_output', array( &$this, 'filter' ), 10, 4 );
 
 			// Disable the admin actions that normally handle the Additional Settings
+			// This is only relevant if the existing version of CF7 has not yet fully removed support for the settings
 			add_action( 'wpcf7_submit', array( &$this, 'prevent_admin_actions_post' ) );
 			add_filter( 'wpcf7_ajax_json_echo', array( &$this, 'prevent_admin_actions_rest' ) );
 		}
